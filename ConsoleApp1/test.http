@@ -2,7 +2,7 @@ POST http://localhost:5000/products
 Content-Type: application/json
 
 {
- "name": "product 4",
+ "name": "",
  "price": 30.67540,
  "id" : 4
 }

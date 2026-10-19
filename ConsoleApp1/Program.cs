@@ -1,48 +1,56 @@
-﻿var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSingleton<IProductService, ProductService>();
+﻿using Microsoft.Extensions.Logging;
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 var app = builder.Build();
-var products = new List<Product>
+if (app.Environment.IsDevelopment())
 {
-        new Product { Name = "product1", Price = 22.0989m , Id = 1 },
-        new Product { Name = "product2", Price = 25.0987m , Id = 2 },
-        new Product { Name = "product3", Price = 77.03567m , Id = 3 }
-  
- };
-app.MapGet("/",()=> "wellcome to my ApI");
-app.MapGet( "/products", ()=> products);
-app.MapGet( "/products/{id}",(int id) => {
-    var product = products.FirstOrDefault(p => p.Id == id);
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+app.Use(async(context,next)=>{
+    try{
+        await next();
+    }        
+    catch(Exception ex) {
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Unhandled exception");
+        context.Response.StatusCode = 500;
+        await context.Response.WriteAsJsonAsync(new { error = "something went wrong" });
+    }
+}); 
+app.MapGet("/",()=> "Hello World!");
+app.MapGet( "/products", (IProductService productService) => {
+     return Results.Ok(productService.GetAllProducts());
+     });
+app.MapGet( "/products/{id}",(int id , IProductService productService) => {
+    var product = productService.GetProductById(id);
     return product is null? Results.NotFound() : Results.Ok(product);
 });
-app.MapPost("/products", (Product newproduct) =>
-{
-    products.Add(newproduct);
-    return Results.Created($"/products/{newproduct.Id}", newproduct); 
-    
+app.MapPost("/products", (Product newproduct, IProductService productService) =>
+{ if (!productService.ValidateProduct(newproduct))
+   {
+    return Results.BadRequest("Invalid product data. Name cannot be empty and Price must be greater than 0.");
+   }
+   var createdProduct = productService.AddProduct(newproduct);
+    return Results.Created($"/products/{createdProduct.Id}", createdProduct);
 } );
-app.MapPut("/products/{id}",(int id , Product updatedproduct) =>
-{  var product = products.FirstOrDefault(p=>p.Id==id);
-     if( product is null) return Results.NotFound();
-     product.Name = updatedproduct.Name;
-     product.Price = updatedproduct.Price;
-     return Results.Ok(product); 
+app.MapPut("/products/{id}",(int id , Product updatedproduct , IProductService productService) =>
+{   
+    if (!productService.ValidateProduct(updatedproduct))
+   {
+    return Results.BadRequest("Invalid product data. Name cannot be empty and Price must be greater than 0.");
+   }
+    var success = productService.UpdateProduct(id, updatedproduct);
+     if(!success) return Results.NotFound();
+     return Results.NoContent(); 
 });
-app.MapDelete("/products/{id}",(int id) =>
+app.MapDelete("/products/{id}",(int id, IProductService productService) =>
 {
-   var product = products.FirstOrDefault(p=>p.Id==id); 
-   if(product is null) return Results.NotFound();
-   products.Remove(product);
+   var success = productService.DeleteProduct(id);
+   if(!success) return Results.NotFound();
    return Results.NoContent();
 });
 
-
-    app.Run();
-
-
-public class Product
-{
- public int Id {get; set; }
- public string Name {get; set; } = string.Empty;
- public decimal Price {get; set; }
-
-} 
+app.Run();

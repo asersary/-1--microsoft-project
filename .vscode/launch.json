@@ -10,7 +10,6 @@
             "type": "dotnet",
             "request": "launch",
             "projectPath": "C:\\Users\\aser\\Desktop\\(1) microsoft project\\ConsoleApp1\\ConsoleApp1.csproj",
-            "launchProfileName": "ConsoleApp1",
             "launchConfigurationId": "ConsoleApp1"
         }
     ]
