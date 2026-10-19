@@ -1,0 +1,22 @@
+POST http://localhost:5000/products
+Content-Type: application/json
+
+{
+ "name": "product 4",
+ "price": 30.67540,
+ "id" : 4
+}
+
+###
+PUT  http://localhost:5000/products/2
+Content-Type: application/json
+
+{
+ "name": "product 8",
+ "price": 88.69540,
+}
+
+###
+Delete http://localhost:5000/products/2
+
+
